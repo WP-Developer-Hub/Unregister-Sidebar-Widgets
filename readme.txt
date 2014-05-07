@@ -1,4 +1,4 @@
-=== WP BASIC Auth ===
+=== Unregister Sidebar Widgets ===
 Contributors: Unregister Sidebar Widgets
 Tags: Widget, Widgets
 Requires at least: 3.9
