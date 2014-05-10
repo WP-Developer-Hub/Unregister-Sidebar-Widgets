@@ -27,41 +27,136 @@ License:
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-// Retrieve all the registered widgets.
-function uw_get_all_widgets() {
-	
-	global $wp_registered_widgets;
-		
-	$widgets_objs = array();
-	
-	foreach ( $wp_registered_widgets as $w ) {
-		$w_obj          = $w['callback'][0];
-		$widgets_objs[] = get_class( $w_obj );
-	}
-	
-	return $widgets_objs;
+class unregister_sidebar_widgets {
+
+public $classes = array();
+public $classes_re = array();
+public $classes_un = array();
+
+function __construct() {
+	add_action( 'admin_menu',   array( $this, 'menu' )       );
+	add_action( 'admin_init',   array( $this, 'save' )       );
+	add_action( 'widgets_init', array( $this, 'unregister' ) );
 	
 }
 
-// add menu page
-add_action( 'admin_menu', 'uw_add_menu' );
-function uw_add_menu() {
+// add menu
+public function menu() {
 	add_theme_page(
 		'Unregister Widgets',
 		'Unregister Widgets',
 		'activate_plugins',
 		'unregister_widget',
-		'uw_form'
+		array( $this, 'form' )
 	);
 }
 
-// form
-function uw_form() {	
-	$registered_widgets = uw_get_all_widgets();
+// get array of UNregistered widgets
+// from the DB.
+public function get_unregistered() {
+	
+	$from_db = get_option( 'unregid_classes' );
+	if ( $from_db ) {
+		$this->classes_un = $from_db;
+	} else {
+		$this->classes_un = array();
+	}
+	
+	
+}
+
+// make associative array of registered widgets
+// from $wp_registered_widgets global variable.
+public function get_registered() {
+	
+	global $wp_registered_widgets;
+	
+	foreach ( $wp_registered_widgets as $rw ) {
+
+		$obj   = $rw['callback'][0];
+		$class = get_class( $obj );
+
+		$this->classes_re[$class] = $this->class_to_namedesc( $class );
+
+	}
+	
+}
+
+// return name & desc array by given class name.
+// it's possible only for registered widgets.
+public function class_to_namedesc( $class ) {
+
+	global $wp_widget_factory;
+	$obj  = $wp_widget_factory->widgets[$class];
+
+	return array(
+		'name' => $obj->name,
+		'desc' => $obj->widget_options['description']
+	);
+
+}
+
+
+// save the key[class]=>[name=>name, desc=>desc] array
+public function save() {
+
+	if ( isset( $_POST['uw-submit'] ) && $_POST['uw-submit'] && check_admin_referer( 'uw-display-form', 'unregister_widget' ) ) {
+	
+		$posted = $_POST;
+		$dont_save = array( 'unregister_widget', '_wp_http_referer', 'uw-submit' );
+		
+		foreach ( $dont_save as $dn ) {
+			if ( isset( $posted[$dn] ) ) {
+				unset($posted[$dn]);
+			}
+		}
+		
+		$unregid_classes = array();
+		foreach ( $posted as $p ) {
+			$unregid_classes[$p] = $this->class_to_namedesc($p);
+		}
+		
+		$updated = update_option( 'unregid_classes', $unregid_classes );
+	
+		if ( $updated ) {
+			add_action( 'admin_notices', array( $this, 'notice' ) );
+		}
+	
+	}
+
+}
+
+// admin notice
+public function notice() {
+	?>
+	<div class="updated">
+		<ul>
+			<li>Saved! The widgets you chose has been hided :) <a href="<?php echo admin_url( 'widgets.php' ); ?>">Widgets Page.</a></li>
+		</ul>
+	</div>
+	<?php
+}
+
+// unregister actually
+public function unregister() {
+	
+	
+	$this->get_unregistered();
+	
+	$unregid = array_keys( $this->classes_un );	
+	
+	foreach ( $unregid as $un ) {
+		unregister_widget($un);
+	}
+	
+}
+
+// display the form
+public function form() {
 	?>
 	<div class="wrap">
 	<h2>Unregister Widgets</h2>
-	<form id="uw-display-form" method="post" action="">
+	<form id="display-form" method="post" action="">
 	
 	<h3>Choose widgets to unregister</h3>
 	
@@ -70,31 +165,30 @@ function uw_form() {
 	<th scope="row">Check the Widgets You don't need.</th>
 	<td>
 	<?php
-	global $wp_widget_factory;
-	$uw_wid_obj = $wp_widget_factory->widgets['WP_Widget_Meta'];
+	$this->get_registered();
+	$this->get_unregistered();
+		
+	$all_wids = array_merge( $this->classes_re, $this->classes_un );
 	
-	$saved_widgets = get_option( 'unregister_widgets' );
+	$already_unregistered = array_keys( $this->classes_un );
+	
 	$num = 0;
-	foreach ( $registered_widgets as $w ) {		
-		$uw_wid_obj = $wp_widget_factory->widgets[$w];
-		$w_name = $uw_wid_obj->name;
-		$w_desc_arr = $uw_wid_obj->widget_options;
-		$w_desc = $w_desc_arr['description'];
-		?>
-		<label for="<?php echo $w; ?>" style="padding-bottom:30px;">
-			<input 
-				type="checkbox" 
-				name="uw_widgets_<?php echo $num; ?>" 
-				id="<?php echo $w; ?>" 
-				value="<?php echo $w; ?>"
-				<?php if ( in_array( $w, $saved_widgets) ) { ?>
-					checked="checked"
-				<?php } ?>
-				/> 
-			<?php echo $w_name; ?>(<?php echo $w_desc; ?>) <br />
-		</label>
-		<?php
-		$num++;
+	foreach ( $all_wids as $key => $val ) {		
+	?>
+	<label for="<?php echo $val['name']; ?>" style="padding-bottom:30px;">
+		<input 
+			type="checkbox" 
+			name="uw_widgets_<?php echo $num; ?>" 
+			id="<?php echo $key; ?>" 
+			value="<?php echo $key; ?>"
+			<?php if ( in_array( $key, $already_unregistered ) ) { ?>
+				checked="checked"
+			<?php } ?>
+			/> 
+		<?php echo $val['name']; ?>(<?php echo $val['desc']; ?>) <br />
+	</label>
+	<?php
+	$num++;
 	} // end foreach.
 	?>
 	</td>
@@ -107,51 +201,7 @@ function uw_form() {
 	<?php
 }
 
-// save
-add_action( 'admin_init', 'uw_save_form' );
-function uw_save_form() {
 
-	if ( isset( $_POST['uw-submit'] ) && $_POST['uw-submit'] && check_admin_referer( 'uw-display-form', 'unregister_widget' ) ) {
-		
-		$posted = $_POST;
-		$dont_save = array( 'unregister_widget', '_wp_http_referer', 'uw-submit' );
-
-		foreach ( $dont_save as $dn ) {
-			if ( isset( $posted[$dn] ) ) {
-				unset($posted[$dn]);
-			}
-		}
-		
-		$posted_objs = array_values( $posted );
-		$updated = update_option( 'unregister_widgets', $posted_objs );
-		
-		if ( $updated ) {
-			add_action( 'admin_notices', 'uw_admin_notice' );
-		}
-		
-	}
-	
 }
 
-// admin notice
-function uw_admin_notice() {
-	?>
-	<div class="updated">
-		<ul>
-			<li>Saved! The widgets you chose has been hided :)</li>
-		</ul>
-	</div>
-	<?php
-}
-
-// unregister the widgets user chose.
-add_action( 'widgets_init', 'uw_unregister_chosen_widgets' );
-function uw_unregister_chosen_widgets() {
-	
-	$users_choice = get_option( 'unregister_widgets' );
-	
-	foreach ( $users_choice as $w ) {
-		unregister_widget($w);
-	}
-	
-}
+new unregister_sidebar_widgets();
