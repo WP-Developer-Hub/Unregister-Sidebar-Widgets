@@ -27,6 +27,11 @@ License:
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+// Prevent direct file access
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
 class unregister_sidebar_widgets {
 
 public $classes = array();
