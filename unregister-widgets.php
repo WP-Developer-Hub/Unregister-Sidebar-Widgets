@@ -4,7 +4,7 @@ Plugin Name: Unregister Sidebar Widgets
 Plugin URI: https://github.com/ShinichiNishikawa/Unregister-Sidebar-Widgets
 Description: You can choose and unregister/disable/hide widgets which you don't need, both defaults and added by plugins.
 Author: Shinichi Nishikawa
-Version: 0.1
+Version: 1.0
 Author URI: http://nskw-style.com
 
 License:
