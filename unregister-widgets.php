@@ -48,8 +48,6 @@ if ( ! class_exists( 'unregister_sidebar_widgets' ) ) {
             add_action( 'admin_menu',   array( $this, 'menu' )       );
             add_action( 'admin_init',   array( $this, 'save' )       );
             add_action( 'widgets_init', array( $this, 'unregister' ), 15 );
-            add_action( 'siteorigin_panels_widgets', array( $this, 'unregister_so' ) );
-            
         }
 
         // add menu
@@ -159,15 +157,6 @@ if ( ! class_exists( 'unregister_sidebar_widgets' ) ) {
             $unregid = array_keys( $this->classes_un );
             foreach ( $unregid as $un ) {
                 unregister_widget($un);
-                error_log($un);
-            }
-        }
-
-        public function unregister_so($widgets) {
-            $this->get_unregistered();
-            $unregid = array_keys( $this->classes_un );
-            foreach ( $unregid as $un ) {
-                unset($widgets[$un]);
             }
         }
 
