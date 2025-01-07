@@ -217,9 +217,6 @@ if ( ! class_exists( 'unregister_sidebar_widgets' ) ) {
                                         <label for="<?php echo esc_attr( $key ); ?>">
                                             <?php echo esc_html( $val['name'] ); ?>
                                         </label>
-                                        <div class="row-actions">
-                                            <span class="edit"><a href="javascript:void(0)" aria-label="<?php echo esc_attr( $val['name'] ); ?>”">Edit</a></span>
-                                        </div>
                                     </td>
                                     <td><?php echo esc_html( $val['desc'] ); ?></td>
                                 <?php
