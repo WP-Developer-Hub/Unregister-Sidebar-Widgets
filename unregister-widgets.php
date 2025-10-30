@@ -37,6 +37,9 @@ License:
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
+
+require_once plugin_dir_path(__FILE__) . 'inc/unregister-widgets-table.php';
+
 if ( ! class_exists( 'unregister_sidebar_widgets' ) ) {
     class unregister_sidebar_widgets {
 
@@ -135,9 +138,8 @@ if ( ! class_exists( 'unregister_sidebar_widgets' ) ) {
                 if ( $updated ) {
                     add_action( 'admin_notices', array( $this, 'notice' ) );
                 }
-            
+                wp_redirect(esc_url_raw($_SERVER['REQUEST_URI']));
             }
-
         }
 
         // admin notice
@@ -162,69 +164,40 @@ if ( ! class_exists( 'unregister_sidebar_widgets' ) ) {
 
         // display the form
         public function form() {
+            $this->get_registered();
+            $this->get_unregistered();
+
+            $all_wids = array_merge($this->classes_re, $this->classes_un);
+
+            $table = new UW_Widgets_List_Table($all_wids, $this->classes_un);
+            $table->prepare_items();
+
             ?>
             <div class="wrap">
-                <h1><?php esc_html_e( 'Unregister Widgets', 'unregister_sidebar_widget' ); ?></h1>
-                <form id="display-form" method="post" action="">
-                    <h2><?php esc_html_e( 'Choose widgets to unregister', 'unregister_sidebar_widget' ); ?></h2>
+                <h1><?php esc_html_e('Unregister Widgets', 'unregister_sidebar_widget'); ?></h1>
+                <form method="post" action="">
+                    <h2><?php esc_html_e('Choose widgets to unregister', 'unregister_sidebar_widget'); ?></h2>
                     <div class="tablenav top">
                         <div class="alignleft actions bulkactions">
-                            <?php submit_button( __( 'Save Widgets', 'unregister_sidebar_widget' ), 'button action', 'uw-submit' ); ?>
+                            <?php submit_button(__('Save Widgets', 'unregister_sidebar_widget'), 'button action', 'uw-submit'); ?>
                         </div>
                         <br class="clear">
                     </div>
-                    <table class="wp-list-table widefat plugins">
-                        <thead>
-                            <tr>
-                                <td id="cb" class="manage-column column-cb check-column">
-                                    <input id="cb-select-all-1" type="checkbox">
-                                </td>
-                                <th scope="col"><?php esc_html_e( 'Widget Name', 'unregister_sidebar_widget' ); ?></th>
-                                <th scope="col"><?php esc_html_e( 'Description', 'unregister_sidebar_widget' ); ?></th>
-                            </tr>
-                        </thead>
-                        <tbody id="the-list">
-                            <?php
-                            $this->get_registered();
-                            $this->get_unregistered();
-
-                            $all_wids = array_merge( $this->classes_re, $this->classes_un );
-                            $already_unregistered = array_keys( $this->classes_un );
-                            foreach ( $all_wids as $key => $val ) {
-                                ?>
-                                <tr <?php echo in_array( $key, $already_unregistered ) ? 'class="active"' : 'class="inactive"'; ?> data-slug="<?php echo esc_attr( $key ); ?>" data-plugin="<?php echo esc_attr( $key ); ?>" >
-                                    <th scope="row" class="check-column">
-                                        <input
-                                            type="checkbox"
-                                            name="uw_widgets[]"
-                                            id="<?php echo esc_attr( $key ); ?>"
-                                            value="<?php echo esc_attr( $key ); ?>"
-                                            <?php checked( in_array( $key, $already_unregistered ) ); ?>
-                                        />
-                                    </th>
-                                    <td>
-                                        <label for="<?php echo esc_attr( $key ); ?>">
-                                            <?php echo esc_html( $val['name'] ); ?>
-                                        </label>
-                                    </td>
-                                    <td><?php echo esc_html( $val['desc'] ); ?></td>
-                                <?php
-                                $num++;
-                            } // end foreach.
-                            ?>
-                        </tbody>
-                    </table>
-                    <?php wp_nonce_field( 'uw-display-form', 'unregister_widget' ); ?>
+                    <?php
+                    $table->display();
+                    wp_nonce_field('uw-display-form', 'unregister_widget');
+                    ?>
                     <div class="tablenav bottom">
                         <div class="alignleft actions bulkactions">
-                            <?php submit_button( __( 'Save Widgets', 'unregister_sidebar_widget' ), 'button action', 'uw-submit' ); ?>
+                            <?php submit_button(__('Save Widgets', 'unregister_sidebar_widget'), 'button action', 'uw-submit'); ?>
                         </div>
                         <br class="clear">
                     </div>
-            </form>
+                </form>
             </div>
             <?php
         }
+
     }
     new unregister_sidebar_widgets();
 }
