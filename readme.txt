@@ -1,9 +1,9 @@
 === Unregister Sidebar Widgets ===
 Contributors: Unregister Sidebar Widgets
 Tags: Widget, Widgets
-Requires at least: 3.9
-Tested up to: 3.9
-Stable tag: 0.1
+Requires at least: 6.8.3
+Tested up to: 6.8.3
+Stable tag: 3.3.0
 
 Enables you to hide the sidebar Widgets you don't need.
 This plugin cleans your Widgets creen :)
