@@ -3,13 +3,13 @@
 Plugin Name: Unregister Sidebar Widgets
 Plugin URI: https://github.com/ShinichiNishikawa/Unregister-Sidebar-Widgets
 Description: You can choose and unregister/disable/hide widgets which you don't need, both defaults and added by plugins.
-Author: Shinichi Nishikawa & DJABhipHop
+Author: Shinichi Nishikawa & matained DJABhipHop
 Requires PHP: 7.2
 Requires at least: 6.0
 License: GPL2 or later
 Version: 3.3.0
 Author URI: http://nskw-style.com
-Text Domain: unregister_sidebar_widget
+Text Domain: Unregister-Sidebar-Widgets
 Domain Path: /languages
 
 License:
@@ -34,111 +34,117 @@ License:
 */
 
 // Prevent direct file access
-if ( ! defined( 'ABSPATH' ) ) {
+if(!defined('ABSPATH')){
     exit;
 }
 
 require_once plugin_dir_path(__FILE__) . 'inc/unregister-widgets-table.php';
 
-if ( ! class_exists( 'unregister_sidebar_widgets' ) ) {
+if (!class_exists('unregister_sidebar_widgets')){
     class unregister_sidebar_widgets {
+        public $classes = [];
+        public $classes_re = [];
+        public $classes_un = [];
 
-        public $classes = array();
-        public $classes_re = array();
-        public $classes_un = array();
-
-        function __construct() {
-            add_action( 'admin_menu',   array( $this, 'menu' )       );
-            add_action( 'admin_init',   array( $this, 'save' )       );
-            add_action( 'widgets_init', array( $this, 'unregister' ), 15 );
+        function __construct(){
+            add_action('admin_menu', [$this, 'menu']);
+            add_action('admin_init', [$this, 'save']);
+            add_action('widgets_init', [$this, 'unregister'], 15);
         }
 
         // add menu
-        public function menu() {
+        public function menu(){
             add_theme_page(
-                __( 'Unregister Widgets', 'unregister_sidebar_widget' ),
-                __( 'Unregister Widgets', 'unregister_sidebar_widget' ),
+                __('Unregister Widgets', 'Unregister-Sidebar-Widgets'),
+                __('Unregister Widgets', 'Unregister-Sidebar-Widgets'),
                 'activate_plugins',
                 'unregister_widget',
-                array( $this, 'form' )
-            );
+                array($this, 'form')
+           );
         }
 
         // get array of UNregistered widgets
         // from the DB.
-        public function get_unregistered() {
-            $from_db = get_option( 'unregid_classes' );
-            if ( $from_db ) {
+        public function get_unregistered(){
+            $from_db = get_option('unregid_classes');
+
+            if ($from_db) {
                 $this->classes_un = $from_db;
             } else {
-                $this->classes_un = array();
+                $this->classes_un = [];
             }
         }
 
         // make associative array of registered widgets
         // from $wp_registered_widgets global variable.
-        public function get_registered() {
+        public function get_registered(){
             global $wp_registered_widgets;
 
-            foreach ( $wp_registered_widgets as $rw ) {
-                $obj   = $rw['callback'][0];
-                $class = get_class( $obj );
+            foreach ($wp_registered_widgets as $rw){
+                $obj = $rw['callback'][0];
+                $class = get_class($obj);
 
-                $this->classes_re[$class] = $this->class_to_namedesc( $class );
+                $this->classes_re[$class] = $this->class_to_namedesc($class);
             }
         }
 
         // return name & desc array by given class name.
         // it's possible only for registered widgets.
-        public function class_to_namedesc( $class ) {
+        public function class_to_namedesc($class){
             global $wp_widget_factory;
 
+            $desc_missing_label = __('No description available.', 'Unregister-Sidebar-Widgets');
+
             // Check if the class exists in the widget factory.
-            if ( isset( $wp_widget_factory->widgets[ $class ] ) ) {
-                $obj = $wp_widget_factory->widgets[ $class ];
+            if (isset($wp_widget_factory->widgets[$class])){
+                $obj = $wp_widget_factory->widgets[$class];
 
                 // Get name and description, with fallbacks.
-                $name = $obj->widget_options['name'] ?? $class; // Replace spaces with underscores in the class name.
-                $desc = $obj->widget_options['description'] ?? 'No description available.';
-
-                return [
-                    'name' => $name,
-                    'desc' => $desc,
-                ];
+                return array(
+                    'name' => $obj->widget_options['name'] ?? $class,
+                    'desc' => $obj->widget_options['description'] ?? $desc_missing_label,
+                );
             }
 
             // Return default values if class is not found.
-            return [
+            return array(
                 'name' => $class,
-                'desc' => 'No description available.',
-            ];
+                'desc' => $desc_missing_label,
+            );
         }
 
         // save the key[class]=>[name=>name, desc=>desc] array
-        public function save() {
-            if ( isset( $_POST['uw-submit'] ) && $_POST['uw-submit'] && check_admin_referer( 'uw-display-form', 'unregister_widget' ) ) {
+        public function save(){
+            $submit = isset($_POST['uw-submit']) ? sanitize_text_field(wp_unslash($_POST['uw-submit'])) : '';
 
-                $dont_save = array( 'unregister_widget', '_wp_http_referer', 'uw-submit' );
-                
-                foreach ( $dont_save as $dn ) {
-                    if ( isset( $posted[$dn] ) ) {
+            if (isset($_POST['uw-submit']) && $submit && check_admin_referer('uw-display-form', 'unregister_widget')){
+
+                $dont_save = array('unregister_widget', '_wp_http_referer', 'uw-submit');
+
+                foreach ($dont_save as $dn){
+                    if (isset($posted[$dn])){
                         unset($posted[$dn]);
                     }
                 }
-                
-                if ( isset( $_POST['uw_widgets'] ) ) {
-                    $unregid_classes = array();
-                    foreach ( $_POST['uw_widgets'] as $class_name ) {
-                        $unregid_classes[ $class_name ] = $this->class_to_namedesc( $class_name );
+
+                if (isset($_POST['uw_widgets'])){
+                    $unregid_classes = [];
+                    $uw_widgets = array_map('sanitize_text_field', wp_unslash($_POST['uw_widgets']));
+
+                    foreach ($uw_widgets as $class_name){
+                        $unregid_classes[$class_name] = $this->class_to_namedesc($class_name);
                     }
                 }
-                
-                $updated = update_option( 'unregid_classes', $unregid_classes );
-            
-                if ( $updated ) {
-                    add_action( 'admin_notices', array( $this, 'notice' ) );
+
+                $updated = update_option('unregid_classes', $unregid_classes);
+
+                if ($updated){
+                    add_action('admin_notices', array($this, 'notice'));
                 }
-                wp_redirect(esc_url_raw($_SERVER['REQUEST_URI']));
+
+                if (isset($_SERVER['REQUEST_URI'])) {
+                    wp_redirect(esc_url_raw(wp_unslash($_SERVER['REQUEST_URI'])));
+                }
             }
         }
 
@@ -147,7 +153,7 @@ if ( ! class_exists( 'unregister_sidebar_widgets' ) ) {
             ?>
             <div class="updated">
                 <ul>
-                    <li><?php echo esc_html__( 'Saved! The widgets you chose have been hidden. :)', 'unregister_sidebar_widget' ); ?> <a href="<?php echo admin_url( 'widgets.php' ); ?>"><?php esc_html_e( 'Widgets Page', 'unregister_sidebar_widget' ); ?></a></li>
+                    <li><?php echo esc_html_e('Saved! The widgets you chose have been hidden. :)', 'Unregister-Sidebar-Widgets'); ?> <a href="<?php echo esc_url(admin_url('widgets.php')); ?>"><?php esc_html_e('Widgets Page', 'Unregister-Sidebar-Widgets'); ?></a></li>
                 </ul>
             </div>
             <?php
@@ -156,8 +162,9 @@ if ( ! class_exists( 'unregister_sidebar_widgets' ) ) {
         // unregister actually
         public function unregister() {
             $this->get_unregistered();
-            $unregid = array_keys( $this->classes_un );
-            foreach ( $unregid as $un ) {
+            $unregid = array_keys($this->classes_un);
+
+            foreach ($unregid as $un) {
                 unregister_widget($un);
             }
         }
@@ -174,25 +181,13 @@ if ( ! class_exists( 'unregister_sidebar_widgets' ) ) {
 
             ?>
             <div class="wrap">
-                <h1><?php esc_html_e('Unregister Widgets', 'unregister_sidebar_widget'); ?></h1>
+                <h1><?php esc_html_e('Unregister Widgets', 'Unregister-Sidebar-Widgets'); ?></h1>
+                <span><?php esc_html_e('Choose the widgets you want to unregister', 'Unregister-Sidebar-Widgets'); ?></span>
                 <form method="post" action="">
-                    <h2><?php esc_html_e('Choose widgets to unregister', 'unregister_sidebar_widget'); ?></h2>
-                    <div class="tablenav top">
-                        <div class="alignleft actions bulkactions">
-                            <?php submit_button(__('Save Widgets', 'unregister_sidebar_widget'), 'button action', 'uw-submit'); ?>
-                        </div>
-                        <br class="clear">
-                    </div>
                     <?php
                     $table->display();
                     wp_nonce_field('uw-display-form', 'unregister_widget');
                     ?>
-                    <div class="tablenav bottom">
-                        <div class="alignleft actions bulkactions">
-                            <?php submit_button(__('Save Widgets', 'unregister_sidebar_widget'), 'button action', 'uw-submit'); ?>
-                        </div>
-                        <br class="clear">
-                    </div>
                 </form>
             </div>
             <?php

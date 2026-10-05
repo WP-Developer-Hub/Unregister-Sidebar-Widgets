@@ -13,21 +13,25 @@ if (!class_exists('UW_Widgets_List_Table')) {
         private $already_unregistered;
 
         public function __construct($widgets, $unregistered) {
-            parent::__construct([
-                'singular' => 'widget',
-                'plural'   => 'widgets',
-                'ajax'     => false
-            ]);
+            parent::__construct(array(
+                'singular' => __('widget', 'Unregister-Sidebar-Widgets'),
+                'plural' => __('widgets', 'Unregister-Sidebar-Widgets'),
+                'ajax' => false
+            ));
             $this->widgets = $widgets;
             $this->already_unregistered = array_keys($unregistered);
         }
 
+        function bulk_actions($which = '') {
+            submit_button(__('Save Widgets', 'Unregister-Sidebar-Widgets'), 'button action', 'uw-submit', false);
+        }
+
         function get_columns() {
-            return [
+            return array(
                 'cb' => '<input type="checkbox">',
-                'name' => __('Widget Name', 'unregister_sidebar_widget'),
-                'desc' => __('Description', 'unregister_sidebar_widget'),
-            ];
+                'name' => __('Widget Name', 'Unregister-Sidebar-Widgets'),
+                'desc' => __('Description', 'Unregister-Sidebar-Widgets'),
+            );
         }
 
         function column_cb($item) {
@@ -49,11 +53,11 @@ if (!class_exists('UW_Widgets_List_Table')) {
             // Transform data for table rows
             $data = [];
             foreach ($this->widgets as $slug => $widget) {
-                $data[] = [
+                $data[] = array(
                     'slug' => $slug,
                     'name' => $widget['name'],
                     'desc' => $widget['desc']
-                ];
+                );
             }
             $this->items = $data;
         }
