@@ -7,7 +7,7 @@ Author: Shinichi Nishikawa & matained DJABhipHop
 Requires PHP: 7.2
 Requires at least: 6.0
 License: GPL2 or later
-Version: 3.3.0
+Version: 4.0.0
 Author URI: http://nskw-style.com
 Text Domain: Unregister-Sidebar-Widgets
 Domain Path: /languages
